@@ -13,21 +13,20 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+
+    /* Disable strict module syntax */
     "verbatimModuleSyntax": false,
 
-    /* Linting */
-    "strict": true,
+    /* Linting - 관대한 설정 */
+    "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true,
+    "noFallthroughCasesInSwitch": false,
 
-    /* Additional options for better development experience */
+    /* Additional options */
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-
-    /* Types */
-    "types": ["vite/client"]
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

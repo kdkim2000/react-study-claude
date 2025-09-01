@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Paper,
   Typography,
@@ -8,14 +7,14 @@ import {
   Chip,
   Box
 } from '@mui/material';
-import type { SearchResult } from '../types/search';
+import { SearchResult } from '../types/search';
 
 interface SearchResultsProps {
   results: SearchResult[];
   query: string;
 }
 
-const SearchResults: React.FC<SearchResultsProps> = ({ results, query }) => {
+const SearchResults = ({ results, query }: SearchResultsProps) => {
   if (results.length === 0) {
     return (
       <Paper elevation={1} sx={{ mt: 1 }}>

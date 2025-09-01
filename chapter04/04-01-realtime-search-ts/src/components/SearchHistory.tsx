@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Paper,
   Typography,
@@ -22,12 +21,12 @@ interface SearchHistoryProps {
   onHistoryClear: () => void;
 }
 
-const SearchHistory: React.FC<SearchHistoryProps> = ({
+const SearchHistory = ({
   history,
   onHistoryClick,
   onHistoryDelete,
   onHistoryClear
-}) => {
+}: SearchHistoryProps) => {
   if (history.length === 0) {
     return null;
   }

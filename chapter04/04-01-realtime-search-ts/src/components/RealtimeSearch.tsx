@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   TextField,
@@ -11,12 +11,12 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon
 } from '@mui/icons-material';
-import type { SearchResult } from '../types/search';
+import { SearchResult } from '../types/search';
 import { searchMockData } from '../data/mockData';
 import SearchHistory from './SearchHistory';
 import SearchResults from './SearchResults';
 
-const RealtimeSearch: React.FC = () => {
+const RealtimeSearch = () => {
   // 상태 관리
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -63,7 +63,7 @@ const RealtimeSearch: React.FC = () => {
     }
 
     // 새로운 타이머 설정 (0.5초 후 실행)
-    debounceTimer.current = setTimeout(() => {
+    debounceTimer.current = window.setTimeout(() => {
       performSearch(query);
     }, 500);
 
