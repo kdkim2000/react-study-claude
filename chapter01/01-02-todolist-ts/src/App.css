@@ -1,0 +1,11 @@
+/* 반응형 디자인 */
+@media (max-width: 600px) {
+  .todo-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .todo-form-row {
+    flex-direction: column;
+  }
+}
