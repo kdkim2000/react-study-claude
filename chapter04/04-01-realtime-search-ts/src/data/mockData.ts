@@ -1,4 +1,4 @@
-import { SearchResult } from '../types/search';
+import type { SearchResult } from '../types/search';
 
 // 검색을 위한 더미 데이터 (100개)
 export const mockData: SearchResult[] = [

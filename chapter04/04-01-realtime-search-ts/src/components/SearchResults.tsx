@@ -8,7 +8,7 @@ import {
   Chip,
   Box
 } from '@mui/material';
-import { SearchResult } from '../types/search';
+import type { SearchResult } from '../types/search';
 
 interface SearchResultsProps {
   results: SearchResult[];

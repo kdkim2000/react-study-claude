@@ -11,7 +11,7 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon
 } from '@mui/icons-material';
-import { SearchResult } from '../types/search';
+import type { SearchResult } from '../types/search';
 import { searchMockData } from '../data/mockData';
 import SearchHistory from './SearchHistory';
 import SearchResults from './SearchResults';
@@ -25,7 +25,7 @@ const RealtimeSearch: React.FC = () => {
   const [showResults, setShowResults] = useState(false);
 
   // 타이머 ID를 저장하기 위한 ref
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimer = useRef<number | null>(null);
 
   // 검색 함수
   const performSearch = async (searchQuery: string) => {
