@@ -71,15 +71,21 @@ jobs:
           echo "Build completed. Contents of dist folder:"
           ls -la dist/
           
-      # 7. GitHub Pages 설정
+      # 8. GitHub Pages용 디렉토리 구조 생성
+      - name: 🗂️ Prepare Pages structure
+        run: |
+          mkdir -p pages/chapter04/04-01-realtime-search-ts
+          cp -r ./chapter04/04-01-realtime-search-ts/dist/* pages/chapter04/04-01-realtime-search-ts/
+          
+      # 9. GitHub Pages 설정
       - name: 🔧 Setup Pages
         uses: actions/configure-pages@v4
         
-      # 8. 아티팩트 업로드 (빌드된 파일들을 임시 저장)
+      # 10. 아티팩트 업로드 (올바른 경로 구조로)
       - name: 📤 Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./chapter04/04-01-realtime-search-ts/dist
+          path: ./pages
 
   # 배포 작업 (빌드가 성공한 후 실행)
   deploy:
