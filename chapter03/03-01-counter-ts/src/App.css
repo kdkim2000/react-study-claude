@@ -1,0 +1,9 @@
+/* Material-UI를 사용하므로 기본 스타일만 유지 */
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* 추가적인 커스텀 스타일이 필요하면 여기에 작성 */

@@ -1,0 +1,7 @@
+/* Material-UI의 CssBaseline이 대부분의 기본 스타일을 처리합니다 */
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
