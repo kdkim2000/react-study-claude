@@ -295,7 +295,7 @@ my-vue-app/                           my-react-app/
 │   ├── router/                       │   ├── router/
 │   ├── stores/                       │   ├── store/
 │   ├── plugins/                      │   ├── theme/          # MUI 테마
-│   │   └── vuetify.ts               │   │   └── index.ts
+│   │   └── vuetify.ts                │   │   └── index.ts
 │   ├── utils/                        │   ├── utils/
 │   ├── App.vue                       │   ├── App.tsx
 │   └── main.ts                       │   └── main.tsx
