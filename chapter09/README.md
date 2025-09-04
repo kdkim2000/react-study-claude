@@ -1939,4 +1939,145 @@ function ConditionalForm() {
 | 폼 생성 | `reactive()` | `useForm()` |
 | 필드 등록 | `v-model` | `register()` |
 | 검증 | 수동 또는 VeeValidate | 내장 또는 스키마 |
-|
+| 에러 표시 | `errors.field` | `formState.errors.field` |
+| 동적 필드 | `v-for` | `useFieldArray` |
+| 필드 감시 | `watch()` | `watch()` |
+| 조건부 필드 | `v-if` | 조건부 렌더링 + 동적 검증 |
+
+### 스키마 검증 비교
+
+| 특징 | Yup | Zod |
+|------|-----|-----|
+| TypeScript | 수동 타입 정의 | 자동 타입 추론 |
+| 문법 | 체이닝 방식 | 체이닝 + 메서드 |
+| 성능 | 보통 | 빠름 |
+| 번들 크기 | 크다 | 작다 |
+| 에러 메시지 | 내장 | 커스터마이징 필요 |
+
+### 마이그레이션 체크리스트
+
+- [ ] `v-model` → `register()` 또는 `Controller`
+- [ ] 수동 검증 → 검증 규칙 객체
+- [ ] `@submit.prevent` → `handleSubmit(onSubmit)`
+- [ ] `errors.field` → `formState.errors.field`
+- [ ] VeeValidate → React Hook Form + Yup/Zod
+- [ ] `v-for` 동적 필드 → `useFieldArray`
+- [ ] `watch` → React Hook Form의 `watch`
+- [ ] 조건부 검증 → 동적 rules
+
+### 성능 최적화 팁
+
+1. **적절한 mode 선택**
+```tsx
+useForm({
+  mode: 'onBlur',     // blur 시점 검증 (성능 우수)
+  mode: 'onChange',    // 입력마다 검증
+  mode: 'onSubmit',    // 제출 시점 검증
+  mode: 'all'         // 모든 이벤트에서 검증
+})
+```
+
+2. **Controller 최소화**
+```tsx
+// 네이티브 HTML 요소는 register 사용
+<input {...register('name')} />
+
+// MUI 같은 커스텀 컴포넌트만 Controller
+<Controller
+  control={control}
+  name="select"
+  render={({ field }) => <Select {...field} />}
+/>
+```
+
+3. **필요한 값만 watch**
+```tsx
+// ❌ 전체 폼 watch
+const values = watch()
+
+// ✅ 특정 필드만
+const email = watch('email')
+const [firstName, lastName] = watch(['firstName', 'lastName'])
+```
+
+### 복잡한 폼 패턴
+
+#### 1. 폼 데이터 변환
+```tsx
+// 제출 전 데이터 변환
+const onSubmit = (data: FormData) => {
+  const transformedData = {
+    ...data,
+    birthDate: new Date(data.birthDate).toISOString(),
+    phone: data.phone.replace(/-/g, ''),
+    tags: data.tags.map(tag => tag.value)
+  }
+  
+  api.submit(transformedData)
+}
+```
+
+#### 2. 비동기 검증
+```tsx
+register('email', {
+  validate: async (value) => {
+    const response = await checkEmailDuplicate(value)
+    return response.isAvailable || '이미 사용 중인 이메일입니다'
+  }
+})
+```
+
+#### 3. 폼 상태 관리
+```tsx
+const {
+  formState: {
+    isDirty,        // 폼이 수정되었는지
+    isValid,        // 검증 통과 여부
+    isSubmitting,   // 제출 중
+    isSubmitted,    // 제출 완료
+    submitCount,    // 제출 시도 횟수
+    dirtyFields,    // 수정된 필드들
+    touchedFields   // 터치된 필드들
+  }
+} = useForm()
+```
+
+### 다음 장 예고
+Chapter 10에서는 Spring Boot와의 API 연동을 학습합니다.
+
+---
+
+## 💬 Q&A
+
+**Q1: Vue3의 v-model처럼 양방향 바인딩은 없나요?**
+> React Hook Form은 uncontrolled 방식으로 더 나은 성능을 제공합니다. 필요시 Controller로 controlled 컴포넌트를 만들 수 있습니다.
+
+**Q2: VeeValidate와 비교해서 어떤가요?**
+> React Hook Form이 더 가볍고 성능이 좋습니다. VeeValidate의 대부분 기능을 제공하면서도 번들 크기가 작습니다.
+
+**Q3: 폼 초기값을 API에서 가져올 때는?**
+> `reset()` 함수를 사용하세요:
+```tsx
+useEffect(() => {
+  api.getUser().then(data => {
+    reset(data)  // 폼 초기값 설정
+  })
+}, [reset])
+```
+
+**Q4: 파일 업로드는 어떻게 처리하나요?**
+> register를 사용하거나 Controller로 처리:
+```tsx
+<input
+  type="file"
+  {...register('file', {
+    validate: {
+      lessThan10MB: (files) => files[0]?.size < 10000000 || '10MB 이하만 가능',
+      acceptedFormats: (files) =>
+        ['image/jpeg', 'image/png'].includes(files[0]?.type) || '이미지만 가능'
+    }
+  })}
+/>
+```
+
+이제 React의 폼 처리와 검증을 마스터했습니다! 🎉
