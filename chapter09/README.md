@@ -1,1483 +1,1942 @@
-# Chapter 8: UI 라이브러리
+# Chapter 9: 폼 처리와 검증
 
 ## 📚 학습 목표
-- Vuetify에서 Material-UI로 전환하는 방법 이해
-- Material-UI 컴포넌트 시스템 마스터
-- Ant Design 기본 사용법 학습
-- 테마 커스터마이징으로 일관된 디자인 시스템 구축
+- Vue3 폼 처리와 React Hook Form의 차이점 이해
+- React Hook Form으로 효율적인 폼 관리
+- Yup/Zod를 활용한 스키마 기반 검증
+- 복잡한 폼 시나리오 처리 방법 마스터
 
 ---
 
-## 1. Material-UI (MUI) - Vuetify 대체
+## 1. React Hook Form 기초
 
 ### 이론 설명 (30%)
 
-Material-UI(MUI)는 React를 위한 Material Design 구현체로, Vuetify와 매우 유사한 컴포넌트와 기능을 제공합니다. 두 라이브러리 모두 Google의 Material Design 가이드라인을 따르므로 전환이 비교적 쉽습니다.
+React Hook Form은 Vue3의 양방향 바인딩(v-model)보다 더 성능 최적화된 폼 처리 라이브러리입니다. 불필요한 리렌더링을 최소화하고 폼 상태를 효율적으로 관리합니다.
 
-#### Vuetify vs Material-UI 비교
+#### Vue3 vs React 폼 처리 비교
 
-| 특징 | Vuetify | Material-UI |
-|------|---------|-------------|
-| 설치 | `vuetify` | `@mui/material @emotion/react @emotion/styled` |
-| 컴포넌트 접두사 | `v-` (v-btn, v-card) | 없음 (Button, Card) |
-| 테마 설정 | `createVuetify()` | `createTheme()` + `ThemeProvider` |
-| 그리드 시스템 | `v-row`, `v-col` | `Grid` |
-| 아이콘 | `mdi-*` | `@mui/icons-material` |
-| 스타일 props | `color`, `variant` | `color`, `variant` |
-| 커스텀 스타일 | `class`, `style` | `sx` prop |
+| 특징 | Vue3 | React (기본) | React Hook Form |
+|------|------|-------------|-----------------|
+| 바인딩 방식 | `v-model` | `value` + `onChange` | `register()` |
+| 리렌더링 | 입력마다 | 입력마다 | 최소화 |
+| 검증 | 수동 또는 라이브러리 | 수동 | 내장 + 스키마 |
+| 에러 처리 | 수동 | 수동 | 자동화 |
+| 타입 지원 | 중간 | 기본 | 우수 |
+| 성능 | 좋음 | 보통 | 매우 좋음 |
 
 ### 실습 코드 (70%)
 
-#### 1.1 Material-UI 설치 및 기본 설정
+#### 1.1 기본 설치 및 설정
 
 ```bash
-# Material-UI 설치
-npm install @mui/material @emotion/react @emotion/styled
-npm install @mui/icons-material
-npm install @mui/lab  # 실험적 컴포넌트
-npm install @mui/x-date-pickers  # 날짜 선택기
+# React Hook Form 설치
+npm install react-hook-form
+npm install @hookform/resolvers yup
+npm install @types/yup -D
+
+# 또는 Zod 사용시
+npm install zod
 ```
 
-```tsx
-// main.tsx - Material-UI 초기 설정
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
-import App from './App'
-
-// Vuetify의 createVuetify()와 유사
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-})
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    {/* Vuetify의 v-app과 유사한 역할 */}
-    <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* 브라우저 기본 스타일 초기화 */}
-      <App />
-    </ThemeProvider>
-  </React.StrictMode>
-)
-```
+#### 1.2 기본 폼 처리 비교
 
 ```vue
-<!-- Vue3/Vuetify 비교: main.ts -->
-<script>
-import { createApp } from 'vue'
-import { createVuetify } from 'vuetify'
-import App from './App.vue'
+<!-- Vue3: 기본 폼 처리 -->
+<template>
+  <form @submit.prevent="handleSubmit">
+    <v-text-field
+      v-model="formData.email"
+      label="이메일"
+      :error-messages="errors.email"
+      @blur="validateEmail"
+    />
+    
+    <v-text-field
+      v-model="formData.password"
+      label="비밀번호"
+      type="password"
+      :error-messages="errors.password"
+    />
+    
+    <v-checkbox
+      v-model="formData.agree"
+      label="약관 동의"
+    />
+    
+    <v-btn type="submit" :disabled="!isValid">
+      제출
+    </v-btn>
+  </form>
+</template>
 
-const vuetify = createVuetify({
-  theme: {
-    themes: {
-      light: {
-        colors: {
-          primary: '#1976d2',
-          secondary: '#dc004e',
-        }
-      }
-    }
-  }
+<script setup lang="ts">
+import { ref, reactive, computed } from 'vue'
+
+const formData = reactive({
+  email: '',
+  password: '',
+  agree: false
 })
 
-createApp(App).use(vuetify).mount('#app')
+const errors = reactive({
+  email: '',
+  password: ''
+})
+
+const isValid = computed(() => {
+  return !errors.email && !errors.password && formData.agree
+})
+
+const validateEmail = () => {
+  if (!formData.email) {
+    errors.email = '이메일은 필수입니다'
+  } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    errors.email = '올바른 이메일 형식이 아닙니다'
+  } else {
+    errors.email = ''
+  }
+}
+
+const handleSubmit = () => {
+  console.log('제출:', formData)
+}
 </script>
 ```
 
-#### 1.2 주요 컴포넌트 매핑
-
 ```tsx
-// React/Material-UI: 컴포넌트 비교 예제
-import React, { useState } from 'react'
+// React: React Hook Form 기본 사용
+import { useForm, SubmitHandler } from 'react-hook-form'
 import {
-  // Layout
-  Container,
   Box,
-  Grid,
-  Stack,
-  
-  // Navigation
-  AppBar,
-  Toolbar,
-  Drawer,
-  BottomNavigation,
-  BottomNavigationAction,
-  
-  // Inputs
   TextField,
   Button,
-  IconButton,
   Checkbox,
-  Radio,
-  RadioGroup,
   FormControlLabel,
-  Switch,
-  Select,
-  MenuItem,
-  Slider,
-  
-  // Data Display
-  Typography,
-  Avatar,
-  Badge,
-  Chip,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemAvatar,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  
-  // Feedback
-  Alert,
-  Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  CircularProgress,
-  LinearProgress,
-  Skeleton,
-  
-  // Surfaces
-  Card,
-  CardContent,
-  CardActions,
-  CardMedia,
-  Paper,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  
-  // Utils
-  ClickAwayListener,
-  Grow,
-  Modal,
-  Popover,
-  Popper,
-  Portal,
-  
-  // Icons
-  InputAdornment,
-  FormControl,
-  InputLabel,
   FormHelperText,
-  
-  // Advanced
-  Autocomplete,
-  Rating,
-  SpeedDial,
-  SpeedDialAction,
-  SpeedDialIcon,
-  Stepper,
-  Step,
-  StepLabel,
-  
-  Tabs,
-  Tab,
-  
-  Tooltip,
-  Zoom,
-  Fade,
-  Collapse,
-  
+  Container,
+  Paper,
+  Typography,
+  Alert
 } from '@mui/material'
 
-// Icons
-import {
-  Home as HomeIcon,
-  Person as PersonIcon,
-  Settings as SettingsIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Search as SearchIcon,
-  Menu as MenuIcon,
-  Close as CloseIcon,
-  ExpandMore as ExpandMoreIcon,
-} from '@mui/icons-material'
+// 폼 데이터 타입 정의
+interface IFormData {
+  email: string
+  password: string
+  agree: boolean
+}
 
-// Vuetify → Material-UI 컴포넌트 매핑 예제
-function ComponentComparison() {
-  const [value, setValue] = useState('')
-  const [checked, setChecked] = useState(false)
-  const [selected, setSelected] = useState('')
-  const [open, setOpen] = useState(false)
-  const [expanded, setExpanded] = useState(false)
-  const [tabValue, setTabValue] = useState(0)
+function BasicForm() {
+  // React Hook Form 초기화
+  const {
+    register,      // 필드 등록
+    handleSubmit,  // 폼 제출 핸들러
+    formState: { 
+      errors,      // 에러 객체
+      isValid,     // 폼 유효성
+      isSubmitting // 제출 중 상태
+    },
+    watch,         // 필드 값 관찰
+    setValue,      // 값 설정
+    getValues,     // 값 가져오기
+    reset          // 폼 리셋
+  } = useForm<IFormData>({
+    mode: 'onChange',  // 검증 모드: onChange, onBlur, onSubmit
+    defaultValues: {
+      email: '',
+      password: '',
+      agree: false
+    }
+  })
+  
+  // 폼 제출 핸들러
+  const onSubmit: SubmitHandler<IFormData> = (data) => {
+    console.log('제출된 데이터:', data)
+    // API 호출 등 처리
+  }
+  
+  // 특정 필드 값 관찰 (Vue3의 watch와 유사)
+  const agreeValue = watch('agree')
   
   return (
-    <Container maxWidth="lg">
-      <Typography variant="h4" gutterBottom>
-        Vuetify → Material-UI 컴포넌트 매핑
-      </Typography>
-      
-      {/* 1. 버튼 컴포넌트 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          버튼 (v-btn → Button)
+    <Container maxWidth="sm">
+      <Paper sx={{ p: 4, mt: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          React Hook Form 기본 예제
         </Typography>
         
-        {/* Vuetify: <v-btn color="primary" variant="elevated">버튼</v-btn> */}
-        <Stack direction="row" spacing={2}>
-          <Button variant="contained" color="primary">
-            Contained (elevated)
-          </Button>
-          <Button variant="outlined" color="secondary">
-            Outlined
-          </Button>
-          <Button variant="text">
-            Text
-          </Button>
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon />}
-            size="large"
-          >
-            아이콘 버튼
-          </Button>
-          <IconButton color="primary">
-            <EditIcon />
-          </IconButton>
-        </Stack>
-      </Paper>
-      
-      {/* 2. 입력 필드 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          입력 필드 (v-text-field → TextField)
-        </Typography>
-        
-        {/* Vuetify: <v-text-field v-model="value" label="라벨" /> */}
-        <Stack spacing={2}>
+        {/* handleSubmit이 검증 후 onSubmit 호출 */}
+        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+          {/* 이메일 필드 */}
           <TextField
-            label="기본 입력"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
             fullWidth
+            label="이메일"
+            margin="normal"
+            error={!!errors.email}
+            helperText={errors.email?.message}
+            {...register('email', {
+              required: '이메일은 필수입니다',
+              pattern: {
+                value: /\S+@\S+\.\S+/,
+                message: '올바른 이메일 형식이 아닙니다'
+              }
+            })}
           />
+          
+          {/* 비밀번호 필드 */}
           <TextField
-            label="아웃라인"
-            variant="outlined"
-            helperText="도움말 텍스트"
             fullWidth
-          />
-          <TextField
-            label="에러 상태"
-            error
-            helperText="에러 메시지"
-            fullWidth
-          />
-          <TextField
-            label="비밀번호"
             type="password"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <PersonIcon />
-                </InputAdornment>
-              ),
-            }}
-            fullWidth
+            label="비밀번호"
+            margin="normal"
+            error={!!errors.password}
+            helperText={errors.password?.message}
+            {...register('password', {
+              required: '비밀번호는 필수입니다',
+              minLength: {
+                value: 8,
+                message: '비밀번호는 8자 이상이어야 합니다'
+              },
+              validate: {
+                hasUpperCase: value => 
+                  /[A-Z]/.test(value) || '대문자를 포함해야 합니다',
+                hasNumber: value =>
+                  /\d/.test(value) || '숫자를 포함해야 합니다'
+              }
+            })}
           />
-        </Stack>
-      </Paper>
-      
-      {/* 3. 카드 컴포넌트 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          카드 (v-card → Card)
-        </Typography>
-        
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            {/* Vuetify:
-            <v-card>
-              <v-card-title>제목</v-card-title>
-              <v-card-text>내용</v-card-text>
-              <v-card-actions>
-                <v-btn>액션</v-btn>
-              </v-card-actions>
-            </v-card>
-            */}
-            <Card>
-              <CardMedia
-                component="img"
-                height="140"
-                image="/api/placeholder/400/140"
-                alt="이미지"
+          
+          {/* 체크박스 */}
+          <FormControlLabel
+            control={
+              <Checkbox
+                {...register('agree', {
+                  required: '약관에 동의해야 합니다'
+                })}
               />
-              <CardContent>
-                <Typography variant="h5" component="div">
-                  카드 제목
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  카드 내용이 여기에 표시됩니다.
-                </Typography>
-              </CardContent>
-              <CardActions>
-                <Button size="small">더보기</Button>
-                <Button size="small">공유</Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        </Grid>
-      </Paper>
-      
-      {/* 4. 그리드 시스템 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          그리드 (v-row/v-col → Grid)
-        </Typography>
-        
-        {/* Vuetify:
-        <v-row>
-          <v-col cols="12" md="6">컬럼1</v-col>
-          <v-col cols="12" md="6">컬럼2</v-col>
-        </v-row>
-        */}
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2, bgcolor: 'primary.light', color: 'white' }}>
-              xs=12 md=6
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2, bgcolor: 'secondary.light', color: 'white' }}>
-              xs=12 md=6
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Paper sx={{ p: 2, bgcolor: 'info.light', color: 'white' }}>
-              xs=12 sm=6 md=4
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Paper sx={{ p: 2, bgcolor: 'warning.light', color: 'white' }}>
-              xs=12 sm=6 md=4
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={12} md={4}>
-            <Paper sx={{ p: 2, bgcolor: 'success.light', color: 'white' }}>
-              xs=12 sm=12 md=4
-            </Paper>
-          </Grid>
-        </Grid>
-      </Paper>
-      
-      {/* 5. 대화상자 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          대화상자 (v-dialog → Dialog)
-        </Typography>
-        
-        <Button variant="contained" onClick={() => setOpen(true)}>
-          대화상자 열기
-        </Button>
-        
-        {/* Vuetify:
-        <v-dialog v-model="open">
-          <v-card>
-            <v-card-title>제목</v-card-title>
-            <v-card-text>내용</v-card-text>
-            <v-card-actions>
-              <v-btn @click="open = false">닫기</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-        */}
-        <Dialog
-          open={open}
-          onClose={() => setOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>대화상자 제목</DialogTitle>
-          <DialogContent>
-            <Typography>
-              대화상자 내용이 여기에 표시됩니다.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpen(false)}>취소</Button>
-            <Button onClick={() => setOpen(false)} variant="contained">
-              확인
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Paper>
-      
-      {/* 6. 데이터 테이블 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          테이블 (v-data-table → Table)
-        </Typography>
-        
-        {/* Vuetify:
-        <v-data-table
-          :headers="headers"
-          :items="items"
-        />
-        */}
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>이름</TableCell>
-                <TableCell>이메일</TableCell>
-                <TableCell>역할</TableCell>
-                <TableCell>액션</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {[
-                { id: 1, name: '홍길동', email: 'hong@example.com', role: 'Admin' },
-                { id: 2, name: '김철수', email: 'kim@example.com', role: 'User' },
-              ].map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell>{row.email}</TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={row.role}
-                      color={row.role === 'Admin' ? 'primary' : 'default'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton size="small">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton size="small">
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
-      
-      {/* 7. 탭 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          탭 (v-tabs → Tabs)
-        </Typography>
-        
-        {/* Vuetify:
-        <v-tabs v-model="tab">
-          <v-tab>탭1</v-tab>
-          <v-tab>탭2</v-tab>
-        </v-tabs>
-        */}
-        <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
-          <Tab label="탭 1" />
-          <Tab label="탭 2" />
-          <Tab label="탭 3" />
-        </Tabs>
-        <Box sx={{ p: 2 }}>
-          {tabValue === 0 && <Typography>탭 1 내용</Typography>}
-          {tabValue === 1 && <Typography>탭 2 내용</Typography>}
-          {tabValue === 2 && <Typography>탭 3 내용</Typography>}
+            }
+            label="약관에 동의합니다"
+          />
+          {errors.agree && (
+            <FormHelperText error>
+              {errors.agree.message}
+            </FormHelperText>
+          )}
+          
+          {/* 현재 동의 상태 표시 */}
+          {agreeValue && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              약관에 동의하셨습니다
+            </Alert>
+          )}
+          
+          {/* 제출 버튼 */}
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            sx={{ mt: 3 }}
+            disabled={!isValid || isSubmitting}
+          >
+            {isSubmitting ? '제출 중...' : '제출'}
+          </Button>
+          
+          {/* 리셋 버튼 */}
+          <Button
+            variant="outlined"
+            fullWidth
+            sx={{ mt: 1 }}
+            onClick={() => reset()}
+          >
+            초기화
+          </Button>
         </Box>
       </Paper>
     </Container>
   )
 }
 
-export default ComponentComparison
+export default BasicForm
 ```
 
-#### 1.3 Material-UI의 sx prop 활용
+#### 1.3 Controller 컴포넌트 사용
 
 ```tsx
-// React: sx prop을 활용한 스타일링
-import { Box, Button, Typography } from '@mui/material'
-
-function SxPropExample() {
-  return (
-    <Box>
-      {/* sx prop은 Vuetify의 class + style을 합친 것과 유사 */}
-      
-      {/* 1. 기본 스타일링 */}
-      <Box
-        sx={{
-          bgcolor: 'primary.main',  // theme 색상 사용
-          color: 'white',
-          p: 2,  // padding: theme.spacing(2)
-          m: 1,  // margin: theme.spacing(1)
-          borderRadius: 1,  // theme.shape.borderRadius
-        }}
-      >
-        기본 박스
-      </Box>
-      
-      {/* 2. 반응형 스타일 */}
-      <Box
-        sx={{
-          width: {
-            xs: '100%',  // 모바일
-            sm: '50%',   // 태블릿
-            md: '33%',   // 데스크톱
-          },
-          display: { xs: 'none', md: 'block' },  // 모바일에서 숨김
-        }}
-      >
-        반응형 박스
-      </Box>
-      
-      {/* 3. 가상 선택자 */}
-      <Button
-        sx={{
-          '&:hover': {
-            bgcolor: 'primary.dark',
-            transform: 'scale(1.05)',
-          },
-          '&:active': {
-            transform: 'scale(0.95)',
-          },
-          '& .MuiButton-startIcon': {
-            color: 'secondary.main',
-          },
-        }}
-      >
-        호버 효과 버튼
-      </Button>
-      
-      {/* 4. 조건부 스타일 */}
-      <Box
-        sx={(theme) => ({
-          bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
-          ...theme.typography.body2,
-          p: theme.spacing(2),
-        })}
-      >
-        테마 기반 스타일
-      </Box>
-      
-      {/* 5. 배열 구문 (여러 스타일 병합) */}
-      <Box
-        sx={[
-          { p: 2, bgcolor: 'background.paper' },
-          { border: 1, borderColor: 'divider' },
-          (theme) => ({
-            '&:hover': {
-              bgcolor: theme.palette.action.hover,
-            },
-          }),
-        ]}
-      >
-        배열 스타일
-      </Box>
-    </Box>
-  )
-}
-```
-
----
-
-## 2. Ant Design 소개
-
-### 이론 설명
-
-Ant Design은 또 다른 인기 있는 React UI 라이브러리로, 기업용 애플리케이션에 특화되어 있습니다.
-
-### 실습 코드
-
-#### 2.1 Ant Design 기본 사용법
-
-```bash
-# Ant Design 설치
-npm install antd
-```
-
-```tsx
-// React: Ant Design 기본 예제
-import React, { useState } from 'react'
+// React: Material-UI 컴포넌트와 통합
+import { useForm, Controller, SubmitHandler } from 'react-hook-form'
 import {
-  Button,
-  Input,
-  Select,
-  DatePicker,
-  Table,
-  Card,
-  Form,
-  message,
-  notification,
-  Modal,
-  Drawer,
-  Steps,
-  Upload,
-  Switch,
-  Rate,
-  Tag,
-  Badge,
-  Avatar,
-  Dropdown,
-  Menu,
-  Space,
-  Row,
-  Col,
-  Typography,
-} from 'antd'
-import {
-  UserOutlined,
-  LockOutlined,
-  UploadOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  SearchOutlined,
-} from '@ant-design/icons'
-import 'antd/dist/reset.css'
-
-const { Title, Text } = Typography
-const { Option } = Select
-
-function AntDesignExample() {
-  const [form] = Form.useForm()
-  const [visible, setVisible] = useState(false)
-  
-  // 테이블 데이터
-  const columns = [
-    {
-      title: '이름',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: '나이',
-      dataIndex: 'age',
-      key: 'age',
-      sorter: (a: any, b: any) => a.age - b.age,
-    },
-    {
-      title: '주소',
-      dataIndex: 'address',
-      key: 'address',
-    },
-    {
-      title: '액션',
-      key: 'action',
-      render: (_: any, record: any) => (
-        <Space>
-          <Button type="link" icon={<EditOutlined />}>
-            수정
-          </Button>
-          <Button type="link" danger icon={<DeleteOutlined />}>
-            삭제
-          </Button>
-        </Space>
-      ),
-    },
-  ]
-  
-  const data = [
-    {
-      key: '1',
-      name: '홍길동',
-      age: 32,
-      address: '서울시 강남구',
-    },
-    {
-      key: '2',
-      name: '김철수',
-      age: 42,
-      address: '부산시 해운대구',
-    },
-  ]
-  
-  // 폼 제출
-  const onFinish = (values: any) => {
-    console.log('Form values:', values)
-    message.success('폼이 성공적으로 제출되었습니다!')
-  }
-  
-  return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2}>Ant Design 컴포넌트 예제</Title>
-      
-      {/* 1. 폼 */}
-      <Card title="폼 예제" style={{ marginBottom: 16 }}>
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={onFinish}
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="사용자명"
-                name="username"
-                rules={[{ required: true, message: '사용자명을 입력하세요' }]}
-              >
-                <Input prefix={<UserOutlined />} placeholder="사용자명" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="비밀번호"
-                name="password"
-                rules={[{ required: true, message: '비밀번호를 입력하세요' }]}
-              >
-                <Input.Password prefix={<LockOutlined />} placeholder="비밀번호" />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Form.Item
-            label="카테고리"
-            name="category"
-          >
-            <Select placeholder="카테고리 선택">
-              <Option value="cat1">카테고리 1</Option>
-              <Option value="cat2">카테고리 2</Option>
-            </Select>
-          </Form.Item>
-          
-          <Form.Item
-            label="날짜"
-            name="date"
-          >
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          
-          <Form.Item>
-            <Button type="primary" htmlType="submit">
-              제출
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
-      
-      {/* 2. 테이블 */}
-      <Card title="테이블 예제" style={{ marginBottom: 16 }}>
-        <Table columns={columns} dataSource={data} />
-      </Card>
-      
-      {/* 3. 기타 컴포넌트 */}
-      <Card title="기타 컴포넌트">
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Space>
-            <Button type="primary">Primary</Button>
-            <Button>Default</Button>
-            <Button type="dashed">Dashed</Button>
-            <Button type="link">Link</Button>
-            <Button danger>Danger</Button>
-          </Space>
-          
-          <Space>
-            <Tag color="magenta">Tag 1</Tag>
-            <Tag color="red">Tag 2</Tag>
-            <Tag color="volcano">Tag 3</Tag>
-          </Space>
-          
-          <Space>
-            <Badge count={5}>
-              <Avatar shape="square" icon={<UserOutlined />} />
-            </Badge>
-            <Rate defaultValue={3} />
-            <Switch defaultChecked />
-          </Space>
-        </Space>
-      </Card>
-    </div>
-  )
-}
-
-// Material-UI vs Ant Design 비교
-function UILibraryComparison() {
-  return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Material-UI vs Ant Design
-      </Typography>
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6">Material-UI 장점</Typography>
-            <ul>
-              <li>Material Design 가이드라인 준수</li>
-              <li>Vuetify와 유사한 컴포넌트 구조</li>
-              <li>sx prop으로 유연한 스타일링</li>
-              <li>TypeScript 지원 우수</li>
-              <li>커스터마이징 용이</li>
-            </ul>
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6">Ant Design 장점</Typography>
-            <ul>
-              <li>기업용 애플리케이션에 최적화</li>
-              <li>폼 처리 기능 강력</li>
-              <li>데이터 테이블 기능 풍부</li>
-              <li>다양한 비즈니스 컴포넌트</li>
-              <li>중국 시장에서 인기</li>
-            </ul>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
-  )
-}
-```
-
----
-
-## 3. 테마 커스터마이징
-
-### 이론 설명
-
-Material-UI의 테마 시스템은 Vuetify와 매우 유사하며, 일관된 디자인 시스템을 구축할 수 있습니다.
-
-### 실습 코드
-
-#### 3.1 Material-UI 테마 커스터마이징
-
-```tsx
-// theme/index.ts - 커스텀 테마 생성
-import { createTheme, ThemeOptions } from '@mui/material/styles'
-import { koKR } from '@mui/material/locale'
-
-// 테마 타입 확장
-declare module '@mui/material/styles' {
-  interface Theme {
-    status: {
-      danger: string
-      warning: string
-    }
-  }
-  interface ThemeOptions {
-    status?: {
-      danger?: string
-      warning?: string
-    }
-  }
-  
-  // 커스텀 색상 추가
-  interface Palette {
-    neutral: Palette['primary']
-  }
-  interface PaletteOptions {
-    neutral?: PaletteOptions['primary']
-  }
-}
-
-// 테마 설정 (Vuetify의 theme 설정과 유사)
-const themeOptions: ThemeOptions = {
-  // 1. 색상 팔레트
-  palette: {
-    mode: 'light',  // 'dark' for dark mode
-    primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
-      contrastText: '#fff',
-    },
-    secondary: {
-      main: '#dc004e',
-      light: '#e33371',
-      dark: '#9a0036',
-      contrastText: '#fff',
-    },
-    error: {
-      main: '#f44336',
-    },
-    warning: {
-      main: '#ff9800',
-    },
-    info: {
-      main: '#2196f3',
-    },
-    success: {
-      main: '#4caf50',
-    },
-    // 커스텀 색상
-    neutral: {
-      main: '#64748B',
-      light: '#94A3B8',
-      dark: '#475569',
-      contrastText: '#fff',
-    },
-    background: {
-      default: '#fafafa',
-      paper: '#ffffff',
-    },
-  },
-  
-  // 2. 타이포그래피
-  typography: {
-    fontFamily: [
-      'Pretendard',
-      'Noto Sans KR',
-      '-apple-system',
-      'BlinkMacSystemFont',
-      'Segoe UI',
-      'Roboto',
-      'sans-serif',
-    ].join(','),
-    h1: {
-      fontSize: '2.5rem',
-      fontWeight: 700,
-      lineHeight: 1.2,
-    },
-    h2: {
-      fontSize: '2rem',
-      fontWeight: 700,
-      lineHeight: 1.3,
-    },
-    h3: {
-      fontSize: '1.75rem',
-      fontWeight: 600,
-      lineHeight: 1.4,
-    },
-    button: {
-      textTransform: 'none',  // 대문자 변환 비활성화
-      fontWeight: 600,
-    },
-  },
-  
-  // 3. 모양
-  shape: {
-    borderRadius: 8,  // 기본 border-radius
-  },
-  
-  // 4. 간격
-  spacing: 8,  // 기본 spacing 단위 (8px)
-  
-  // 5. 컴포넌트별 커스터마이징
-  components: {
-    // Button 커스터마이징
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          padding: '8px 16px',
-          fontWeight: 600,
-          boxShadow: 'none',
-          '&:hover': {
-            boxShadow: 'none',
-          },
-        },
-        contained: {
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-          },
-        },
-        sizeSmall: {
-          padding: '6px 12px',
-          fontSize: '0.875rem',
-        },
-        sizeLarge: {
-          padding: '12px 24px',
-          fontSize: '1rem',
-        },
-      },
-      defaultProps: {
-        disableElevation: true,
-      },
-    },
-    
-    // TextField 커스터마이징
-    MuiTextField: {
-      defaultProps: {
-        variant: 'outlined',
-        size: 'small',
-      },
-      styleOverrides: {
-        root: {
-          '& .MuiOutlinedInput-root': {
-            '&:hover fieldset': {
-              borderColor: 'primary.main',
-            },
-          },
-        },
-      },
-    },
-    
-    // Card 커스터마이징
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-          '&:hover': {
-            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-          },
-        },
-      },
-    },
-    
-    // Chip 커스터마이징
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          borderRadius: 6,
-          fontWeight: 500,
-        },
-      },
-    },
-  },
-  
-  // 6. 커스텀 속성
-  status: {
-    danger: '#e53e3e',
-    warning: '#dd6b20',
-  },
-}
-
-// 라이트 테마
-export const lightTheme = createTheme(themeOptions, koKR)
-
-// 다크 테마
-export const darkTheme = createTheme({
-  ...themeOptions,
-  palette: {
-    ...themeOptions.palette,
-    mode: 'dark',
-    background: {
-      default: '#121212',
-      paper: '#1e1e1e',
-    },
-  },
-}, koKR)
-```
-
-#### 3.2 테마 적용 및 사용
-
-```tsx
-// App.tsx - 테마 적용 예제
-import React, { useState, createContext, useContext } from 'react'
-import {
-  ThemeProvider,
-  CssBaseline,
-  Container,
   Box,
-  Paper,
-  Typography,
-  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Slider,
   Switch,
   FormControlLabel,
-  Grid,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
+  Autocomplete,
+  DatePicker,
+  RadioGroup,
+  Radio,
+  FormLabel,
+  Rating,
+  Button,
+  Typography,
+  Paper,
+  FormHelperText
 } from '@mui/material'
-import {
-  Brightness4 as DarkIcon,
-  Brightness7 as LightIcon,
-} from '@mui/icons-material'
-import { lightTheme, darkTheme } from './theme'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import ko from 'date-fns/locale/ko'
 
-// 테마 컨텍스트
-interface ThemeContextType {
-  toggleTheme: () => void
-  isDarkMode: boolean
+interface AdvancedFormData {
+  name: string
+  category: string
+  level: number
+  isActive: boolean
+  tags: string[]
+  birthDate: Date | null
+  gender: string
+  rating: number
 }
 
-const ThemeContext = createContext<ThemeContextType>({
-  toggleTheme: () => {},
-  isDarkMode: false,
-})
-
-export const useTheme = () => useContext(ThemeContext)
-
-// 테마 프로바이더 컴포넌트
-function CustomThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isDarkMode, setIsDarkMode] = useState(false)
+function ControllerExample() {
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    setValue
+  } = useForm<AdvancedFormData>({
+    defaultValues: {
+      name: '',
+      category: '',
+      level: 50,
+      isActive: false,
+      tags: [],
+      birthDate: null,
+      gender: '',
+      rating: 3
+    }
+  })
   
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode)
+  const onSubmit: SubmitHandler<AdvancedFormData> = (data) => {
+    console.log('제출된 데이터:', data)
   }
   
-  const theme = isDarkMode ? darkTheme : lightTheme
+  // 옵션 데이터
+  const categories = ['개발', '디자인', '기획', '마케팅']
+  const tagOptions = ['React', 'Vue', 'Angular', 'Next.js', 'Nuxt']
   
   return (
-    <ThemeContext.Provider value={{ toggleTheme, isDarkMode }}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {children}
-      </ThemeProvider>
-    </ThemeContext.Provider>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ko}>
+      <Paper sx={{ p: 4, maxWidth: 600, mx: 'auto', mt: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Controller 컴포넌트 예제
+        </Typography>
+        
+        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+          {/* 일반 TextField - register 사용 가능 */}
+          <Controller
+            name="name"
+            control={control}
+            rules={{ required: '이름은 필수입니다' }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="이름"
+                margin="normal"
+                error={!!errors.name}
+                helperText={errors.name?.message}
+              />
+            )}
+          />
+          
+          {/* Select - Controller 필수 */}
+          <Controller
+            name="category"
+            control={control}
+            rules={{ required: '카테고리를 선택하세요' }}
+            render={({ field }) => (
+              <FormControl fullWidth margin="normal" error={!!errors.category}>
+                <InputLabel>카테고리</InputLabel>
+                <Select {...field} label="카테고리">
+                  {categories.map(cat => (
+                    <MenuItem key={cat} value={cat}>
+                      {cat}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.category && (
+                  <FormHelperText>{errors.category.message}</FormHelperText>
+                )}
+              </FormControl>
+            )}
+          />
+          
+          {/* Slider */}
+          <Box sx={{ mt: 3, mb: 2 }}>
+            <Typography gutterBottom>
+              레벨: {watch('level')}
+            </Typography>
+            <Controller
+              name="level"
+              control={control}
+              render={({ field }) => (
+                <Slider
+                  {...field}
+                  valueLabelDisplay="auto"
+                  step={10}
+                  marks
+                  min={0}
+                  max={100}
+                />
+              )}
+            />
+          </Box>
+          
+          {/* Switch */}
+          <Controller
+            name="isActive"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Switch {...field} checked={field.value} />
+                }
+                label={field.value ? '활성' : '비활성'}
+              />
+            )}
+          />
+          
+          {/* Autocomplete (다중 선택) */}
+          <Controller
+            name="tags"
+            control={control}
+            rules={{ 
+              required: '최소 1개의 태그를 선택하세요',
+              validate: value => value.length <= 3 || '최대 3개까지 선택 가능합니다'
+            }}
+            render={({ field }) => (
+              <Autocomplete
+                {...field}
+                multiple
+                options={tagOptions}
+                onChange={(_, value) => field.onChange(value)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="태그"
+                    margin="normal"
+                    error={!!errors.tags}
+                    helperText={errors.tags?.message}
+                  />
+                )}
+              />
+            )}
+          />
+          
+          {/* DatePicker */}
+          <Controller
+            name="birthDate"
+            control={control}
+            rules={{ required: '생년월일을 선택하세요' }}
+            render={({ field }) => (
+              <DatePicker
+                {...field}
+                label="생년월일"
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    margin: 'normal',
+                    error: !!errors.birthDate,
+                    helperText: errors.birthDate?.message
+                  }
+                }}
+              />
+            )}
+          />
+          
+          {/* RadioGroup */}
+          <Controller
+            name="gender"
+            control={control}
+            rules={{ required: '성별을 선택하세요' }}
+            render={({ field }) => (
+              <FormControl margin="normal" error={!!errors.gender}>
+                <FormLabel>성별</FormLabel>
+                <RadioGroup {...field} row>
+                  <FormControlLabel 
+                    value="male" 
+                    control={<Radio />} 
+                    label="남성" 
+                  />
+                  <FormControlLabel 
+                    value="female" 
+                    control={<Radio />} 
+                    label="여성" 
+                  />
+                  <FormControlLabel 
+                    value="other" 
+                    control={<Radio />} 
+                    label="기타" 
+                  />
+                </RadioGroup>
+                {errors.gender && (
+                  <FormHelperText>{errors.gender.message}</FormHelperText>
+                )}
+              </FormControl>
+            )}
+          />
+          
+          {/* Rating */}
+          <Box sx={{ mt: 2 }}>
+            <Typography component="legend">평점</Typography>
+            <Controller
+              name="rating"
+              control={control}
+              render={({ field }) => (
+                <Rating {...field} />
+              )}
+            />
+          </Box>
+          
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            sx={{ mt: 3 }}
+          >
+            제출
+          </Button>
+        </Box>
+      </Paper>
+    </LocalizationProvider>
   )
 }
+```
 
-// 테마 사용 예제 컴포넌트
-function ThemedComponent() {
-  const { toggleTheme, isDarkMode } = useTheme()
+---
+
+## 2. Yup/Zod 스키마 검증
+
+### 이론 설명
+
+스키마 기반 검증은 폼 검증 로직을 선언적으로 정의할 수 있게 해줍니다. Vue3에서는 VeeValidate + Yup을 사용하는 것과 유사합니다.
+
+### 실습 코드
+
+#### 2.1 Yup을 사용한 검증
+
+```tsx
+// React: Yup 스키마 검증
+import { useForm, SubmitHandler } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
+import {
+  Container,
+  Paper,
+  TextField,
+  Button,
+  Box,
+  Typography,
+  Alert,
+  Grid,
+  MenuItem
+} from '@mui/material'
+
+// Yup 스키마 정의 (Vue3 VeeValidate와 유사)
+const schema = yup.object({
+  // 문자열 검증
+  username: yup
+    .string()
+    .required('사용자명은 필수입니다')
+    .min(3, '최소 3자 이상이어야 합니다')
+    .max(20, '최대 20자까지 가능합니다')
+    .matches(/^[a-zA-Z0-9_]+$/, '영문, 숫자, 언더스코어만 가능합니다'),
+  
+  // 이메일 검증
+  email: yup
+    .string()
+    .required('이메일은 필수입니다')
+    .email('올바른 이메일 형식이 아닙니다'),
+  
+  // 비밀번호 검증
+  password: yup
+    .string()
+    .required('비밀번호는 필수입니다')
+    .min(8, '최소 8자 이상이어야 합니다')
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      '대소문자, 숫자, 특수문자를 포함해야 합니다'
+    ),
+  
+  // 비밀번호 확인
+  passwordConfirm: yup
+    .string()
+    .required('비밀번호 확인은 필수입니다')
+    .oneOf([yup.ref('password')], '비밀번호가 일치하지 않습니다'),
+  
+  // 나이 (숫자)
+  age: yup
+    .number()
+    .required('나이는 필수입니다')
+    .positive('양수여야 합니다')
+    .integer('정수여야 합니다')
+    .min(18, '18세 이상이어야 합니다')
+    .max(100, '100세 이하여야 합니다'),
+  
+  // 웹사이트 URL
+  website: yup
+    .string()
+    .url('올바른 URL 형식이 아닙니다')
+    .nullable(),
+  
+  // 전화번호
+  phone: yup
+    .string()
+    .required('전화번호는 필수입니다')
+    .matches(
+      /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/,
+      '올바른 전화번호 형식이 아닙니다'
+    ),
+  
+  // 선택 필드
+  role: yup
+    .string()
+    .required('역할을 선택하세요')
+    .oneOf(['admin', 'user', 'guest'], '올바른 역할이 아닙니다'),
+  
+  // 약관 동의
+  terms: yup
+    .boolean()
+    .required('약관에 동의해야 합니다')
+    .oneOf([true], '약관에 동의해야 합니다'),
+  
+  // 조건부 검증
+  newsletter: yup.boolean(),
+  newsletterEmail: yup.string().when('newsletter', {
+    is: true,
+    then: (schema) => schema.required('뉴스레터 이메일은 필수입니다').email(),
+    otherwise: (schema) => schema.nullable()
+  })
+}).required()
+
+type FormData = yup.InferType<typeof schema>
+
+function YupValidationForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+    watch
+  } = useForm<FormData>({
+    resolver: yupResolver(schema),  // Yup 스키마 연결
+    mode: 'onChange'
+  })
+  
+  const newsletterValue = watch('newsletter')
+  
+  const onSubmit: SubmitHandler<FormData> = (data) => {
+    console.log('검증 통과:', data)
+  }
   
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* 테마 토글 */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={isDarkMode}
-              onChange={toggleTheme}
-              icon={<LightIcon />}
-              checkedIcon={<DarkIcon />}
-            />
-          }
-          label={isDarkMode ? '다크 모드' : '라이트 모드'}
-        />
-      </Box>
-      
-      {/* 색상 팔레트 표시 */}
-      <Typography variant="h4" gutterBottom>
-        테마 커스터마이징 예제
-      </Typography>
-      
-      <Grid container spacing={3}>
-        {/* Primary 색상 */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Primary 색상
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    bgcolor: 'primary.light',
-                    borderRadius: 1,
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    bgcolor: 'primary.main',
-                    borderRadius: 1,
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    bgcolor: 'primary.dark',
-                    borderRadius: 1,
-                  }}
-                />
-              </Box>
-              <Button variant="contained" color="primary" sx={{ mr: 1 }}>
-                Primary Button
-              </Button>
-              <Button variant="outlined" color="primary">
-                Outlined
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
+    <Container maxWidth="md">
+      <Paper sx={{ p: 4, mt: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Yup 스키마 검증 예제
+        </Typography>
         
-        {/* Secondary 색상 */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Secondary 색상
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    bgcolor: 'secondary.light',
-                    borderRadius: 1,
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    bgcolor: 'secondary.main',
-                    borderRadius: 1,
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    bgcolor: 'secondary.dark',
-                    borderRadius: 1,
-                  }}
-                />
-              </Box>
-              <Button variant="contained" color="secondary" sx={{ mr: 1 }}>
-                Secondary Button
-              </Button>
-              <Button variant="outlined" color="secondary">
-                Outlined
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        {/* 커스텀 색상 */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                커스텀 Neutral 색상
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <Box
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    bgcolor: 'neutral.light',
-                    borderRadius: 1,
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    bgcolor: 'neutral.main',
-                    borderRadius: 1,
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    bgcolor: 'neutral.dark',
-                    borderRadius: 1,
-                  }}
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        {/* 타이포그래피 */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                타이포그래피
-              </Typography>
-              <Typography variant="h1">Heading 1</Typography>
-              <Typography variant="h2">Heading 2</Typography>
-              <Typography variant="h3">Heading 3</Typography>
-              <Typography variant="body1">
-                Body 1 - 본문 텍스트입니다.
-              </Typography>
-              <Typography variant="body2">
-                Body 2 - 작은 본문 텍스트입니다.
-              </Typography>
-              <Typography variant="button">Button Text</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        {/* 기타 컴포넌트 */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                커스터마이징된 컴포넌트
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Chip label="Default Chip" />
-                <Chip label="Primary Chip" color="primary" />
-                <Chip label="Secondary Chip" color="secondary" />
-                <Button size="small">Small</Button>
-                <Button size="medium">Medium</Button>
-                <Button size="large">Large</Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+          <Grid container spacing={2}>
+            {/* 사용자명 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="사용자명"
+                error={!!errors.username}
+                helperText={errors.username?.message}
+                {...register('username')}
+              />
+            </Grid>
+            
+            {/* 이메일 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="이메일"
+                error={!!errors.email}
+                helperText={errors.email?.message}
+                {...register('email')}
+              />
+            </Grid>
+            
+            {/* 비밀번호 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="password"
+                label="비밀번호"
+                error={!!errors.password}
+                helperText={errors.password?.message}
+                {...register('password')}
+              />
+            </Grid>
+            
+            {/* 비밀번호 확인 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="password"
+                label="비밀번호 확인"
+                error={!!errors.passwordConfirm}
+                helperText={errors.passwordConfirm?.message}
+                {...register('passwordConfirm')}
+              />
+            </Grid>
+            
+            {/* 나이 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                type="number"
+                label="나이"
+                error={!!errors.age}
+                helperText={errors.age?.message}
+                {...register('age')}
+              />
+            </Grid>
+            
+            {/* 역할 */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                fullWidth
+                label="역할"
+                defaultValue=""
+                error={!!errors.role}
+                helperText={errors.role?.message}
+                {...register('role')}
+              >
+                <MenuItem value="">선택하세요</MenuItem>
+                <MenuItem value="admin">관리자</MenuItem>
+                <MenuItem value="user">사용자</MenuItem>
+                <MenuItem value="guest">게스트</MenuItem>
+              </TextField>
+            </Grid>
+          </Grid>
+          
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            sx={{ mt: 3 }}
+            disabled={!isValid}
+          >
+            제출
+          </Button>
+        </Box>
+      </Paper>
     </Container>
   )
 }
+```
 
-// 메인 앱
-function ThemedApp() {
+#### 2.2 Zod를 사용한 검증
+
+```tsx
+// React: Zod 스키마 검증
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import {
+  Container,
+  Paper,
+  TextField,
+  Button,
+  Box,
+  Typography,
+  Stepper,
+  Step,
+  StepLabel,
+  Grid,
+  FormControlLabel,
+  Checkbox
+} from '@mui/material'
+import { useState } from 'react'
+
+// Zod 스키마 정의 (Yup보다 TypeScript 친화적)
+const personalInfoSchema = z.object({
+  firstName: z
+    .string()
+    .min(2, '이름은 2자 이상이어야 합니다')
+    .max(50, '이름은 50자 이하여야 합니다'),
+  lastName: z
+    .string()
+    .min(1, '성은 필수입니다'),
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다 (YYYY-MM-DD)')
+})
+
+const contactSchema = z.object({
+  email: z
+    .string()
+    .email('올바른 이메일 형식이 아닙니다'),
+  phone: z
+    .string()
+    .regex(/^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/, '올바른 전화번호 형식이 아닙니다'),
+  address: z
+    .string()
+    .min(10, '주소는 10자 이상 입력하세요')
+})
+
+const accountSchema = z.object({
+  username: z
+    .string()
+    .min(4, '사용자명은 4자 이상이어야 합니다')
+    .regex(/^[a-zA-Z0-9_]+$/, '영문, 숫자, 언더스코어만 가능합니다'),
+  password: z
+    .string()
+    .min(8, '비밀번호는 8자 이상이어야 합니다')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      '대문자, 소문자, 숫자를 포함해야 합니다'
+    ),
+  passwordConfirm: z.string(),
+  terms: z
+    .boolean()
+    .refine(val => val === true, '약관에 동의해야 합니다')
+}).refine(data => data.password === data.passwordConfirm, {
+  message: '비밀번호가 일치하지 않습니다',
+  path: ['passwordConfirm']
+})
+
+// 전체 스키마 결합
+const fullSchema = z.object({
+  ...personalInfoSchema.shape,
+  ...contactSchema.shape,
+  ...accountSchema.shape
+})
+
+type FullFormData = z.infer<typeof fullSchema>
+
+// 다단계 폼 컴포넌트
+function MultiStepForm() {
+  const [activeStep, setActiveStep] = useState(0)
+  const [formData, setFormData] = useState<Partial<FullFormData>>({})
+  
+  const steps = ['개인 정보', '연락처 정보', '계정 정보']
+  
+  // 각 단계별 스키마
+  const schemas = [personalInfoSchema, contactSchema, accountSchema]
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    trigger,
+    getValues
+  } = useForm<FullFormData>({
+    resolver: zodResolver(fullSchema),
+    mode: 'onChange',
+    defaultValues: formData
+  })
+  
+  const handleNext = async () => {
+    // 현재 단계의 필드만 검증
+    const fieldsToValidate = Object.keys(schemas[activeStep].shape)
+    const isValid = await trigger(fieldsToValidate as any)
+    
+    if (isValid) {
+      const currentValues = getValues()
+      setFormData({ ...formData, ...currentValues })
+      setActiveStep(prev => prev + 1)
+    }
+  }
+  
+  const handleBack = () => {
+    setActiveStep(prev => prev - 1)
+  }
+  
+  const onSubmit = (data: FullFormData) => {
+    console.log('최종 제출:', data)
+    // API 호출
+  }
+  
   return (
-    <CustomThemeProvider>
-      <ThemedComponent />
-    </CustomThemeProvider>
+    <Container maxWidth="md">
+      <Paper sx={{ p: 4, mt: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          다단계 폼 (Zod 검증)
+        </Typography>
+        
+        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+          {steps.map(label => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+        
+        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+          {/* Step 1: 개인 정보 */}
+          {activeStep === 0 && (
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="이름"
+                  error={!!errors.firstName}
+                  helperText={errors.firstName?.message}
+                  {...register('firstName')}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="성"
+                  error={!!errors.lastName}
+                  helperText={errors.lastName?.message}
+                  {...register('lastName')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="생년월일"
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.birthDate}
+                  helperText={errors.birthDate?.message}
+                  {...register('birthDate')}
+                />
+              </Grid>
+            </Grid>
+          )}
+          
+          {/* Step 2: 연락처 정보 */}
+          {activeStep === 1 && (
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="이메일"
+                  error={!!errors.email}
+                  helperText={errors.email?.message}
+                  {...register('email')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="전화번호"
+                  placeholder="010-1234-5678"
+                  error={!!errors.phone}
+                  helperText={errors.phone?.message}
+                  {...register('phone')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="주소"
+                  error={!!errors.address}
+                  helperText={errors.address?.message}
+                  {...register('address')}
+                />
+              </Grid>
+            </Grid>
+          )}
+          
+          {/* Step 3: 계정 정보 */}
+          {activeStep === 2 && (
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="사용자명"
+                  error={!!errors.username}
+                  helperText={errors.username?.message}
+                  {...register('username')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="비밀번호"
+                  error={!!errors.password}
+                  helperText={errors.password?.message}
+                  {...register('password')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="비밀번호 확인"
+                  error={!!errors.passwordConfirm}
+                  helperText={errors.passwordConfirm?.message}
+                  {...register('passwordConfirm')}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox {...register('terms')} />
+                  }
+                  label="이용약관에 동의합니다"
+                />
+                {errors.terms && (
+                  <Typography color="error" variant="caption" display="block">
+                    {errors.terms.message}
+                  </Typography>
+                )}
+              </Grid>
+            </Grid>
+          )}
+          
+          {/* 버튼 영역 */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+            <Button
+              disabled={activeStep === 0}
+              onClick={handleBack}
+            >
+              이전
+            </Button>
+            
+            {activeStep === steps.length - 1 ? (
+              <Button type="submit" variant="contained">
+                제출
+              </Button>
+            ) : (
+              <Button variant="contained" onClick={handleNext}>
+                다음
+              </Button>
+            )}
+          </Box>
+        </Box>
+      </Paper>
+    </Container>
   )
 }
+```
 
-export default ThemedApp
+---
+
+## 3. 복잡한 폼 시나리오
+
+### 실습 코드
+
+#### 3.1 동적 필드 관리 (useFieldArray)
+
+```tsx
+// React: 동적 폼 필드 관리
+import { useForm, useFieldArray, Controller } from 'react-hook-form'
+import {
+  Container,
+  Paper,
+  TextField,
+  Button,
+  Box,
+  Typography,
+  IconButton,
+  Grid,
+  Card,
+  CardContent,
+  Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
+} from '@mui/material'
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  DragIndicator as DragIcon
+} from '@mui/icons-material'
+
+interface Education {
+  school: string
+  degree: string
+  year: number
+}
+
+interface Experience {
+  company: string
+  position: string
+  duration: string
+  description: string
+}
+
+interface FormData {
+  personalInfo: {
+    name: string
+    email: string
+  }
+  education: Education[]
+  experience: Experience[]
+  skills: { name: string; level: number }[]
+}
+
+function DynamicForm() {
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch
+  } = useForm<FormData>({
+    defaultValues: {
+      personalInfo: {
+        name: '',
+        email: ''
+      },
+      education: [
+        { school: '', degree: '', year: new Date().getFullYear() }
+      ],
+      experience: [
+        { company: '', position: '', duration: '', description: '' }
+      ],
+      skills: [
+        { name: '', level: 1 }
+      ]
+    }
+  })
+  
+  // useFieldArray로 동적 필드 관리
+  const {
+    fields: educationFields,
+    append: appendEducation,
+    remove: removeEducation,
+    move: moveEducation
+  } = useFieldArray({
+    control,
+    name: 'education'
+  })
+  
+  const {
+    fields: experienceFields,
+    append: appendExperience,
+    remove: removeExperience
+  } = useFieldArray({
+    control,
+    name: 'experience'
+  })
+  
+  const {
+    fields: skillFields,
+    append: appendSkill,
+    remove: removeSkill
+  } = useFieldArray({
+    control,
+    name: 'skills'
+  })
+  
+  const onSubmit = (data: FormData) => {
+    console.log('제출된 데이터:', data)
+  }
+  
+  return (
+    <Container maxWidth="lg">
+      <Paper sx={{ p: 4, mt: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          이력서 폼 (동적 필드)
+        </Typography>
+        
+        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+          {/* 개인 정보 섹션 */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                개인 정보
+              </Typography>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="이름"
+                    error={!!errors.personalInfo?.name}
+                    helperText={errors.personalInfo?.name?.message}
+                    {...register('personalInfo.name', {
+                      required: '이름은 필수입니다'
+                    })}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="이메일"
+                    error={!!errors.personalInfo?.email}
+                    helperText={errors.personalInfo?.email?.message}
+                    {...register('personalInfo.email', {
+                      required: '이메일은 필수입니다',
+                      pattern: {
+                        value: /\S+@\S+\.\S+/,
+                        message: '올바른 이메일 형식이 아닙니다'
+                      }
+                    })}
+                  />
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+          
+          {/* 교육 섹션 */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6">
+                  교육 ({educationFields.length})
+                </Typography>
+                <Button
+                  startIcon={<AddIcon />}
+                  onClick={() => appendEducation({
+                    school: '',
+                    degree: '',
+                    year: new Date().getFullYear()
+                  })}
+                >
+                  추가
+                </Button>
+              </Box>
+              
+              {educationFields.map((field, index) => (
+                <Box key={field.id} sx={{ mb: 2 }}>
+                  {index > 0 && <Divider sx={{ my: 2 }} />}
+                  
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        label="학교명"
+                        error={!!errors.education?.[index]?.school}
+                        helperText={errors.education?.[index]?.school?.message}
+                        {...register(`education.${index}.school`, {
+                          required: '학교명은 필수입니다'
+                        })}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        fullWidth
+                        label="학위"
+                        {...register(`education.${index}.degree`)}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        label="졸업년도"
+                        {...register(`education.${index}.year`, {
+                          min: { value: 1950, message: '올바른 년도를 입력하세요' },
+                          max: { value: 2030, message: '올바른 년도를 입력하세요' }
+                        })}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={2}>
+                      <IconButton
+                        color="error"
+                        onClick={() => removeEducation(index)}
+                        disabled={educationFields.length === 1}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Grid>
+                  </Grid>
+                </Box>
+              ))}
+            </CardContent>
+          </Card>
+          
+          {/* 경력 섹션 */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6">
+                  경력 ({experienceFields.length})
+                </Typography>
+                <Button
+                  startIcon={<AddIcon />}
+                  onClick={() => appendExperience({
+                    company: '',
+                    position: '',
+                    duration: '',
+                    description: ''
+                  })}
+                >
+                  추가
+                </Button>
+              </Box>
+              
+              {experienceFields.map((field, index) => (
+                <Box key={field.id} sx={{ mb: 2 }}>
+                  {index > 0 && <Divider sx={{ my: 2 }} />}
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="회사명"
+                        {...register(`experience.${index}.company`)}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="직책"
+                        {...register(`experience.${index}.position`)}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="기간"
+                        placeholder="2020.01 - 2023.12"
+                        {...register(`experience.${index}.duration`)}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={5}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={2}
+                        label="설명"
+                        {...register(`experience.${index}.description`)}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={1}>
+                      <IconButton
+                        color="error"
+                        onClick={() => removeExperience(index)}
+                        disabled={experienceFields.length === 1}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Grid>
+                  </Grid>
+                </Box>
+              ))}
+            </CardContent>
+          </Card>
+          
+          {/* 스킬 섹션 */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6">
+                  스킬 ({skillFields.length})
+                </Typography>
+                <Button
+                  startIcon={<AddIcon />}
+                  onClick={() => appendSkill({ name: '', level: 1 })}
+                >
+                  추가
+                </Button>
+              </Box>
+              
+              {skillFields.map((field, index) => (
+                <Grid container spacing={2} key={field.id} sx={{ mb: 1 }}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="스킬명"
+                      {...register(`skills.${index}.name`)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Controller
+                      name={`skills.${index}.level`}
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl fullWidth>
+                          <InputLabel>레벨</InputLabel>
+                          <Select {...field} label="레벨">
+                            <MenuItem value={1}>초급</MenuItem>
+                            <MenuItem value={2}>중급</MenuItem>
+                            <MenuItem value={3}>고급</MenuItem>
+                            <MenuItem value={4}>전문가</MenuItem>
+                          </Select>
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={2}>
+                    <IconButton
+                      color="error"
+                      onClick={() => removeSkill(index)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Grid>
+                </Grid>
+              ))}
+            </CardContent>
+          </Card>
+          
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            fullWidth
+          >
+            제출
+          </Button>
+        </Box>
+      </Paper>
+    </Container>
+  )
+}
+```
+
+#### 3.2 조건부 필드와 종속성
+
+```tsx
+// React: 조건부 필드 관리
+import { useForm, Controller, useWatch } from 'react-hook-form'
+import { useState, useEffect } from 'react'
+import {
+  Container,
+  Paper,
+  TextField,
+  Button,
+  Box,
+  Typography,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Select,
+  MenuItem,
+  InputLabel,
+  Switch,
+  Collapse,
+  Alert,
+  Grid,
+  Chip
+} from '@mui/material'
+
+interface FormData {
+  userType: 'individual' | 'company'
+  
+  // 개인 필드
+  firstName?: string
+  lastName?: string
+  ssn?: string
+  
+  // 회사 필드
+  companyName?: string
+  businessNumber?: string
+  representative?: string
+  
+  // 공통 필드
+  email: string
+  phone: string
+  hasAddress: boolean
+  
+  // 주소 필드 (조건부)
+  address?: {
+    street: string
+    city: string
+    zipCode: string
+  }
+  
+  // 배송 옵션
+  shippingMethod: 'standard' | 'express' | 'pickup'
+  expressDeliveryDate?: string
+  pickupLocation?: string
+}
+
+function ConditionalForm() {
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    setValue,
+    clearErrors,
+    setError,
+    getValues
+  } = useForm<FormData>({
+    defaultValues: {
+      userType: 'individual',
+      hasAddress: false,
+      shippingMethod: 'standard'
+    }
+  })
+  
+  // 필드 감시
+  const userType = watch('userType')
+  const hasAddress = watch('hasAddress')
+  const shippingMethod = watch('shippingMethod')
+  
+  // userType 변경시 관련 필드 초기화
+  useEffect(() => {
+    if (userType === 'individual') {
+      setValue('companyName', '')
+      setValue('businessNumber', '')
+      setValue('representative', '')
+      clearErrors(['companyName', 'businessNumber', 'representative'])
+    } else {
+      setValue('firstName', '')
+      setValue('lastName', '')
+      setValue('ssn', '')
+      clearErrors(['firstName', 'lastName', 'ssn'])
+    }
+  }, [userType, setValue, clearErrors])
+  
+  // shippingMethod 변경시 관련 필드 초기화
+  useEffect(() => {
+    if (shippingMethod !== 'express') {
+      setValue('expressDeliveryDate', '')
+    }
+    if (shippingMethod !== 'pickup') {
+      setValue('pickupLocation', '')
+    }
+  }, [shippingMethod, setValue])
+  
+  const onSubmit = (data: FormData) => {
+    // 추가 검증
+    if (data.shippingMethod === 'express' && !data.expressDeliveryDate) {
+      setError('expressDeliveryDate', {
+        message: '배송 날짜를 선택하세요'
+      })
+      return
+    }
+    
+    console.log('제출된 데이터:', data)
+  }
+  
+  // 도시 옵션 (동적)
+  const getCityOptions = () => {
+    const address = getValues('address')
+    if (!address?.zipCode) return []
+    
+    // 우편번호에 따른 도시 목록 (예시)
+    if (address.zipCode.startsWith('1')) {
+      return ['서울', '경기']
+    } else if (address.zipCode.startsWith('2')) {
+      return ['인천', '부산']
+    }
+    return ['기타']
+  }
+  
+  return (
+    <Container maxWidth="md">
+      <Paper sx={{ p: 4, mt: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          조건부 폼 예제
+        </Typography>
+        
+        <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+          {/* 사용자 유형 선택 */}
+          <FormControl component="fieldset" margin="normal">
+            <FormLabel component="legend">사용자 유형</FormLabel>
+            <Controller
+              name="userType"
+              control={control}
+              rules={{ required: '사용자 유형을 선택하세요' }}
+              render={({ field }) => (
+                <RadioGroup {...field} row>
+                  <FormControlLabel
+                    value="individual"
+                    control={<Radio />}
+                    label="개인"
+                  />
+                  <FormControlLabel
+                    value="company"
+                    control={<Radio />}
+                    label="법인"
+                  />
+                </RadioGroup>
+              )}
+            />
+          </FormControl>
+          
+          {/* 사용자 유형에 따른 조건부 필드 */}
+          <Collapse in={userType === 'individual'}>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="이름"
+                  error={!!errors.firstName}
+                  helperText={errors.firstName?.message}
+                  {...register('firstName', {
+                    required: userType === 'individual' ? '이름은 필수입니다' : false
+                  })}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="성"
+                  error={!!errors.lastName}
+                  helperText={errors.lastName?.message}
+                  {...register('lastName', {
+                    required: userType === 'individual' ? '성은 필수입니다' : false
+                  })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="주민등록번호"
+                  placeholder="######-#######"
+                  error={!!errors.ssn}
+                  helperText={errors.ssn?.message}
+                  {...register('ssn', {
+                    pattern: {
+                      value: /^\d{6}-\d{7}$/,
+                      message: '올바른 주민등록번호 형식이 아닙니다'
+                    }
+                  })}
+                />
+              </Grid>
+            </Grid>
+          </Collapse>
+          
+          <Collapse in={userType === 'company'}>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="회사명"
+                  error={!!errors.companyName}
+                  helperText={errors.companyName?.message}
+                  {...register('companyName', {
+                    required: userType === 'company' ? '회사명은 필수입니다' : false
+                  })}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="사업자등록번호"
+                  placeholder="###-##-#####"
+                  error={!!errors.businessNumber}
+                  helperText={errors.businessNumber?.message}
+                  {...register('businessNumber', {
+                    required: userType === 'company' ? '사업자등록번호는 필수입니다' : false,
+                    pattern: {
+                      value: /^\d{3}-\d{2}-\d{5}$/,
+                      message: '올바른 사업자등록번호 형식이 아닙니다'
+                    }
+                  })}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="대표자명"
+                  error={!!errors.representative}
+                  helperText={errors.representative?.message}
+                  {...register('representative', {
+                    required: userType === 'company' ? '대표자명은 필수입니다' : false
+                  })}
+                />
+              </Grid>
+            </Grid>
+          </Collapse>
+          
+          <Divider sx={{ my: 3 }} />
+          
+          {/* 공통 필드 */}
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="이메일"
+                type="email"
+                error={!!errors.email}
+                helperText={errors.email?.message}
+                {...register('email', {
+                  required: '이메일은 필수입니다',
+                  pattern: {
+                    value: /\S+@\S+\.\S+/,
+                    message: '올바른 이메일 형식이 아닙니다'
+                  }
+                })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="전화번호"
+                error={!!errors.phone}
+                helperText={errors.phone?.message}
+                {...register('phone', {
+                  required: '전화번호는 필수입니다'
+                })}
+              />
+            </Grid>
+          </Grid>
+          
+          {/* 주소 토글 */}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={hasAddress}
+                {...register('hasAddress')}
+              />
+            }
+            label="주소 입력"
+            sx={{ mt: 2 }}
+          />
+          
+          <Collapse in={hasAddress}>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="도로명 주소"
+                  error={!!errors.address?.street}
+                  helperText={errors.address?.street?.message}
+                  {...register('address.street', {
+                    required: hasAddress ? '주소는 필수입니다' : false
+                  })}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="우편번호"
+                  error={!!errors.address?.zipCode}
+                  helperText={errors.address?.zipCode?.message}
+                  {...register('address.zipCode', {
+                    required: hasAddress ? '우편번호는 필수입니다' : false,
+                    pattern: {
+                      value: /^\d{5}$/,
+                      message: '5자리 숫자를 입력하세요'
+                    }
+                  })}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="address.city"
+                  control={control}
+                  rules={{
+                    required: hasAddress ? '도시를 선택하세요' : false
+                  }}
+                  render={({ field }) => (
+                    <FormControl fullWidth error={!!errors.address?.city}>
+                      <InputLabel>도시</InputLabel>
+                      <Select {...field} label="도시">
+                        {getCityOptions().map(city => (
+                          <MenuItem key={city} value={city}>
+                            {city}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                      {errors.address?.city && (
+                        <FormHelperText>
+                          {errors.address.city.message}
+                        </FormHelperText>
+                      )}
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+            </Grid>
+          </Collapse>
+          
+          <Divider sx={{ my: 3 }} />
+          
+          {/* 배송 방법 */}
+          <FormControl component="fieldset" margin="normal">
+            <FormLabel component="legend">배송 방법</FormLabel>
+            <Controller
+              name="shippingMethod"
+              control={control}
+              render={({ field }) => (
+                <RadioGroup {...field} row>
+                  <FormControlLabel
+                    value="standard"
+                    control={<Radio />}
+                    label="일반배송"
+                  />
+                  <FormControlLabel
+                    value="express"
+                    control={<Radio />}
+                    label="특급배송"
+                  />
+                  <FormControlLabel
+                    value="pickup"
+                    control={<Radio />}
+                    label="직접수령"
+                  />
+                </RadioGroup>
+              )}
+            />
+          </FormControl>
+          
+          {/* 배송 방법에 따른 추가 필드 */}
+          <Collapse in={shippingMethod === 'express'}>
+            <TextField
+              fullWidth
+              type="date"
+              label="희망 배송일"
+              InputLabelProps={{ shrink: true }}
+              sx={{ mt: 2 }}
+              error={!!errors.expressDeliveryDate}
+              helperText={errors.expressDeliveryDate?.message}
+              {...register('expressDeliveryDate')}
+            />
+          </Collapse>
+          
+          <Collapse in={shippingMethod === 'pickup'}>
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>수령 지점</InputLabel>
+              <Controller
+                name="pickupLocation"
+                control={control}
+                render={({ field }) => (
+                  <Select {...field} label="수령 지점">
+                    <MenuItem value="gangnam">강남점</MenuItem>
+                    <MenuItem value="jongno">종로점</MenuItem>
+                    <MenuItem value="bundang">분당점</MenuItem>
+                  </Select>
+                )}
+              />
+            </FormControl>
+          </Collapse>
+          
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            size="large"
+            sx={{ mt: 4 }}
+          >
+            제출
+          </Button>
+        </Box>
+      </Paper>
+    </Container>
+  )
+}
 ```
 
 ---
 
 ## ⚠️ 흔한 실수와 해결 방법
 
-### 1. Import 문제
+### 1. register와 Controller 혼동
 
 ```tsx
-// ❌ 잘못된 import - 전체 라이브러리 import
-import * as MUI from '@mui/material'
+// ❌ Material-UI Select에 register 사용
+<Select {...register('category')}>
+  <MenuItem value="1">옵션1</MenuItem>
+</Select>
 
-// ✅ 올바른 import - 필요한 컴포넌트만
-import { Button, TextField, Box } from '@mui/material'
-
-// ❌ 아이콘 전체 import
-import * as Icons from '@mui/icons-material'
-
-// ✅ 개별 아이콘 import
-import HomeIcon from '@mui/icons-material/Home'
-// 또는
-import { Home, Person } from '@mui/icons-material'
+// ✅ Controller 사용
+<Controller
+  name="category"
+  control={control}
+  render={({ field }) => (
+    <Select {...field}>
+      <MenuItem value="1">옵션1</MenuItem>
+    </Select>
+  )}
+/>
 ```
 
-### 2. sx prop 오타
+### 2. 검증 규칙 오류
 
 ```tsx
-// ❌ CSS 속성명 사용
-<Box sx={{ 'margin-top': 2, 'background-color': 'red' }} />
+// ❌ 잘못된 required 규칙
+{...register('email', {
+  required: true  // 에러 메시지 없음
+})}
 
-// ✅ camelCase 또는 약어 사용
-<Box sx={{ mt: 2, bgcolor: 'red' }} />
-<Box sx={{ marginTop: 2, backgroundColor: 'red' }} />
+// ✅ 에러 메시지 포함
+{...register('email', {
+  required: '이메일은 필수입니다'
+})}
 ```
 
-### 3. 테마 접근 방법
+### 3. 조건부 검증 실수
 
 ```tsx
-// ❌ 하드코딩된 색상
-<Box sx={{ bgcolor: '#1976d2' }} />
+// ❌ 조건부 검증이 작동하지 않음
+{...register('field', {
+  required: someCondition && '필수입니다'  // false일 때 문제
+})}
 
-// ✅ 테마 색상 사용
-<Box sx={{ bgcolor: 'primary.main' }} />
-<Box sx={(theme) => ({ bgcolor: theme.palette.primary.main })} />
+// ✅ 삼항 연산자 사용
+{...register('field', {
+  required: someCondition ? '필수입니다' : false
+})}
 ```
 
-### 4. Grid 사용 실수
+### 4. useFieldArray 키 문제
 
 ```tsx
-// ❌ Grid item에 container 속성
-<Grid item container>
+// ❌ index를 key로 사용
+{fields.map((field, index) => (
+  <div key={index}>  {/* 순서 변경시 문제 발생 */}
 
-// ✅ 별도의 Grid로 중첩
-<Grid item>
-  <Grid container>
-    {/* ... */}
-  </Grid>
-</Grid>
-
-// ❌ 잘못된 breakpoint
-<Grid item xs={12} sm={6} md={4} lg={3} xl={2} />
-
-// ✅ 올바른 breakpoint 사용
-<Grid item xs={12} sm={6} md={4} lg={3} />
+// ✅ field.id 사용
+{fields.map((field, index) => (
+  <div key={field.id}>  {/* 안정적인 key */}
 ```
 
 ---
 
 ## 🎯 실습 과제
 
-### 📝 과제 1: 대시보드 UI 구성 (난이도: ⭐)
+### 📝 과제 1: 회원가입 폼 (난이도: ⭐)
 
 #### 요구사항
-- Material-UI를 사용한 대시보드 레이아웃
-- AppBar, Drawer, Grid 시스템 활용
-- 최소 3개의 통계 카드
-- 차트 영역 (Skeleton으로 대체 가능)
-- 반응형 디자인
+- React Hook Form + Yup 사용
+- 이메일, 비밀번호, 비밀번호 확인
+- 이름, 전화번호, 생년월일
+- 약관 동의 (필수/선택)
+- 실시간 검증 피드백
+- Material-UI 컴포넌트 사용
 
-#### 구현할 컴포넌트
-- 상단 AppBar (로고, 사용자 정보)
-- 좌측 Drawer (메뉴)
-- 메인 영역 (Grid로 카드 배치)
-- 통계 카드 컴포넌트
+#### 검증 규칙
+- 이메일: 형식 검증, 중복 체크 시뮬레이션
+- 비밀번호: 8자 이상, 영문/숫자/특수문자 포함
+- 전화번호: 한국 전화번호 형식
+- 나이: 14세 이상
 
 ---
 
-### 📝 과제 2: 커스텀 테마 관리 시스템 (난이도: ⭐⭐)
+### 📝 과제 2: 상품 주문 폼 (난이도: ⭐⭐)
 
 #### 요구사항
-- 라이트/다크 모드 전환
-- Primary, Secondary 색상 커스터마이징
-- 폰트 크기 조절 (작게/보통/크게)
-- 테마 설정 localStorage 저장
-- 실시간 테마 미리보기
+- 다단계 폼 (3단계)
+- 동적 필드 (상품 추가/삭제)
+- 조건부 필드 (배송/수령 선택)
+- 주문 요약 표시
+- 각 단계별 검증
 
-#### 구현할 기능
-- 테마 설정 패널
-- 색상 선택기
-- 폰트 크기 슬라이더
-- 테마 리셋 버튼
-- 테마 export/import
+#### 구현할 단계
+1. **상품 선택**: 상품 목록, 수량, 옵션
+2. **배송 정보**: 주소, 배송 방법, 요청사항
+3. **결제 정보**: 결제 수단, 쿠폰, 최종 확인
 
 ---
 
-## 📌 Chapter 8 요약
+## 📌 Chapter 9 요약
 
-### UI 라이브러리 선택 가이드
+### React Hook Form 핵심 개념
 
-| 상황 | 추천 라이브러리 | 이유 |
-|------|----------------|------|
-| Vuetify에서 전환 | Material-UI | 동일한 Material Design |
-| 기업용 애플리케이션 | Ant Design | 풍부한 비즈니스 컴포넌트 |
-| 커스터마이징 중요 | Material-UI | sx prop, 테마 시스템 |
-| 빠른 개발 | Ant Design | 기본 스타일 우수 |
-
-### Vuetify → Material-UI 전환 체크리스트
-
-- [ ] `v-` 접두사 제거
-- [ ] `v-model` → `value` + `onChange`
-- [ ] `v-row/v-col` → `Grid`
-- [ ] `:color` → `color` prop
-- [ ] `@click` → `onClick`
-- [ ] `class` → `sx` prop
-- [ ] `v-if` → 조건부 렌더링
-- [ ] `v-for` → `map()`
-
-### 핵심 포인트
-1. **sx prop**: 강력한 스타일링 도구
-2. **테마**: 일관된 디자인 시스템
-3. **타입 지원**: TypeScript 완벽 지원
-4. **반응형**: breakpoint 시스템 활용
-
-### 다음 장 예고
-Chapter 9에서는 폼 처리와 검증을 학습합니다.
-
----
-
-## 💬 Q&A
-
-**Q1: Vuetify의 v-model처럼 간편한 방법이 있나요?**
-> Material-UI는 controlled component 패턴을 사용합니다. Custom Hook으로 간소화할 수 있습니다:
-```tsx
-const [value, setValue] = useState('')
-const handleChange = (e) => setValue(e.target.value)
-// 또는 Custom Hook 사용
-```
-
-**Q2: Vuetify의 그리드 시스템과 차이점은?**
-> Material-UI의 Grid는 12 컬럼 시스템은 동일하지만, `container`와 `item` prop을 명시해야 합니다.
-
-**Q3: 어떤 UI 라이브러리를 선택해야 하나요?**
-> Vuetify 사용 경험이 있다면 Material-UI를, 관리자 페이지나 대시보드는 Ant Design을 추천합니다.
-
-이제 React UI 라이브러리를 마스터했습니다! 🎉
+| 기능 | Vue3 | React Hook Form |
+|------|------|-----------------|
+| 폼 생성 | `reactive()` | `useForm()` |
+| 필드 등록 | `v-model` | `register()` |
+| 검증 | 수동 또는 VeeValidate | 내장 또는 스키마 |
+|
