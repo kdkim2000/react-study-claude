@@ -1,0 +1,24 @@
+const { closeDatabase } = require('../database/database');
+
+// 테스트 전역 설정
+beforeAll(async () => {
+  // 테스트 환경 설정
+  process.env.NODE_ENV = 'test';
+  process.env.DB_PATH = ':memory:'; // 메모리 데이터베이스 사용
+});
+
+// 모든 테스트 완료 후 정리
+afterAll(async () => {
+  await closeDatabase();
+});
+
+// 각 테스트 전 콘솔 출력 억제
+beforeEach(() => {
+  jest.spyOn(console, 'log').mockImplementation(() => {});
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+// 각 테스트 후 모든 모킹 해제
+afterEach(() => {
+  jest.restoreAllMocks();
+});
