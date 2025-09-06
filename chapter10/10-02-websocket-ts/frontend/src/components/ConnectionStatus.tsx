@@ -4,16 +4,18 @@ import {
   Box,
   Typography,
   Tooltip,
+  IconButton,
 } from '@mui/material';
 import {
   Wifi as ConnectedIcon,
   WifiOff as DisconnectedIcon,
   Sync as ReconnectingIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useNotification } from '../context/NotificationContext';
 
 export const ConnectionStatus: React.FC = () => {
-  const { connectionStatus } = useNotification();
+  const { connectionStatus, reconnect } = useNotification();
 
   const getStatusConfig = () => {
     switch (connectionStatus) {
@@ -44,6 +46,15 @@ export const ConnectionStatus: React.FC = () => {
 
   const config = getStatusConfig();
 
+  const handleReconnect = () => {
+    if (reconnect) {
+      console.log('수동 재연결 시도');
+      reconnect();
+    } else {
+      console.warn('재연결 함수를 사용할 수 없습니다');
+    }
+  };
+
   return (
     <Box display="flex" alignItems="center" gap={1}>
       <Tooltip title={config.description} arrow>
@@ -57,9 +68,20 @@ export const ConnectionStatus: React.FC = () => {
       </Tooltip>
       
       {connectionStatus === 'disconnected' && (
-        <Typography variant="caption" color="text.secondary">
-          자동으로 재연결을 시도합니다
-        </Typography>
+        <>
+          <Tooltip title="수동 재연결" arrow>
+            <IconButton 
+              size="small" 
+              onClick={handleReconnect}
+              sx={{ ml: 0.5 }}
+            >
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Typography variant="caption" color="text.secondary">
+            백엔드 서버(8080)를 확인해주세요
+          </Typography>
+        </>
       )}
     </Box>
   );

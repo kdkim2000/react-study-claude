@@ -40,25 +40,36 @@ export const CommentForm: React.FC = () => {
       setIsSubmitting(true);
       setMessage(null);
 
+      console.log('📝 댓글 작성 요청:', comment);
+      
       const response = await fetch('/api/comments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(comment),
+        body: JSON.stringify({
+          author: comment.author.trim(),
+          content: comment.content.trim(),
+        }),
       });
 
+      console.log('📝 댓글 작성 응답:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error('댓글 작성에 실패했습니다');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
+
+      const result = await response.json();
+      console.log('✅ 댓글 작성 성공:', result);
 
       setComment({ content: '', author: '' });
       setMessage({
-        text: '댓글이 작성되었습니다. 새로운 알림이 생성됩니다!',
+        text: '댓글이 작성되었습니다! 새로운 알림이 생성됩니다.',
         type: 'success',
       });
     } catch (error) {
-      console.error('댓글 작성 실패:', error);
+      console.error('❌ 댓글 작성 실패:', error);
       setMessage({
         text: error instanceof Error ? error.message : '댓글 작성에 실패했습니다',
         type: 'error',

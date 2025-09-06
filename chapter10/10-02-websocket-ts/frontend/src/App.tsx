@@ -14,6 +14,7 @@ import { NotificationHeader } from './components/NotificationHeader';
 import { NotificationList } from './components/NotificationList';
 import { NotificationSettings } from './components/NotificationSettings';
 import { CommentForm } from './components/CommentForm';
+import { WebSocketTest } from './components/WebSocketTest';
 
 // Material-UI 테마 설정
 const theme = createTheme({
@@ -66,6 +67,9 @@ function App() {
             {/* 오른쪽: 설정 및 테스트 */}
             <Grid item xs={12} md={4}>
               <Box display="flex" flexDirection="column" gap={3}>
+                {/* WebSocket 테스트 (개발용) */}
+                <WebSocketTest />
+                
                 {/* 알림 설정 */}
                 <NotificationSettings />
                 

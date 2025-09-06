@@ -1,5 +1,21 @@
 [
   {
+    "id": "notif-1757180051064",
+    "title": "새 댓글: 박세원",
+    "message": "댓글댓글",
+    "type": "info",
+    "isRead": true,
+    "createdAt": "2025-09-06T17:34:11.064Z"
+  },
+  {
+    "id": "notif-1757179971382",
+    "title": "새 댓글: 김경덕",
+    "message": "댓글댓글",
+    "type": "info",
+    "isRead": true,
+    "createdAt": "2025-09-06T17:32:51.382Z"
+  },
+  {
     "id": "notification-1",
     "type": "comment",
     "title": "새 댓글이 달렸습니다",

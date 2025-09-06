@@ -14,5 +14,17 @@
     "commenterEmail": "letype@example.com",
     "content": "타입 정의가 정말 도움이 됐어요. 감사합니다!",
     "createdAt": "2025-09-06T16:16:08.287Z"
+  },
+  {
+    "id": "comment-1757179971381",
+    "author": "김경덕",
+    "content": "댓글댓글",
+    "createdAt": "2025-09-06T17:32:51.381Z"
+  },
+  {
+    "id": "comment-1757180051060",
+    "author": "박세원",
+    "content": "댓글댓글",
+    "createdAt": "2025-09-06T17:34:11.060Z"
   }
 ]
