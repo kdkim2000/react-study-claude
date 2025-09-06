@@ -1,0 +1,286 @@
+# 🔔 Real-time Notification Backend
+
+> **Node.js + Socket.IO + File Database 기반 실시간 알림 시스템**
+
+## 🚀 빠른 시작
+
+### 📋 사전 요구사항
+- **Node.js 18+**
+- **npm 8+**
+
+### ⚡ 설치 및 실행
+
+```bash
+# 1. 의존성 설치
+npm install
+
+# 2. 환경 변수 설정
+cp .env.example .env
+
+# 3. 데이터베이스 초기화
+npm run init-db
+
+# 4. 개발 서버 실행
+npm run dev
+
+# 🎉 완료! http://localhost:8080에서 확인
+```
+
+## 🌐 API 엔드포인트
+
+### 📡 **REST API**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| 🔍 GET | `/api/notifications` | 알림 목록 조회 |
+| 📖 PUT | `/api/notifications/:id/read` | 알림 읽음 처리 |
+| 📖 PUT | `/api/notifications/read-all` | 모든 알림 읽음 처리 |
+| 🗑 DELETE | `/api/notifications/:id` | 알림 삭제 |
+| 📊 GET | `/api/notifications/stats` | 알림 통계 |
+| 🧪 POST | `/api/notifications/test` | 테스트 알림 생성 |
+| 💬 GET | `/api/comments` | 댓글 목록 조회 |
+| ✍️ POST | `/api/comments` | 댓글 작성 (알림 생성) |
+| ⚙️ GET | `/api/settings` | 알림 설정 조회 |
+| ⚙️ PUT | `/api/settings` | 알림 설정 변경 |
+
+### 🔌 **WebSocket Events**
+
+**클라이언트 → 서버:**
+- `join_room` - 알림 룸 참여
+- `mark_notification_read` - 알림 읽음 처리
+
+**서버 → 클라이언트:**
+- `notification:new` - 새 알림 발생
+- `notification:read` - 알림 읽음 상태 변경
+- `notifications:count_updated` - 읽지 않은 알림 수 변경
+- `connection:status` - 연결 상태 변화
+- `settings:updated` - 설정 변경
+
+## 🛠 기술 스택
+
+- **Node.js 18+** - JavaScript 런타임
+- **Express.js** - 웹 프레임워크
+- **Socket.IO** - 실시간 WebSocket 통신
+- **JSON File Database** - 간단한 데이터 저장
+- **Joi** - 데이터 검증
+- **UUID** - 고유 ID 생성
+
+## 📁 프로젝트 구조
+
+```
+backend/
+├── 📂 src/
+│   ├── 🏠 server.js                 # 메인 서버 (Express + Socket.IO)
+│   ├── 📂 routes/                   # API 라우트
+│   │   ├── 🔔 notifications.js     # 알림 API
+│   │   ├── 💬 comments.js          # 댓글 API (알림 트리거)
+│   │   └── ⚙️ settings.js          # 설정 API
+│   ├── 📂 services/
+│   │   └── 🔔 NotificationService.js # 알림 비즈니스 로직
+│   ├── 📂 middleware/
+│   │   ├── ✅ validation.js        # 입력 검증
+│   │   └── 🚨 errorHandler.js      # 에러 처리
+│   ├── 📂 database/
+│   │   └── 🗄 database.js          # 파일 DB 관리
+│   └── 📂 scripts/
+│       └── 🔧 initDatabase.js      # DB 초기화 스크립트
+├── 📂 data/                        # JSON 파일 데이터베이스
+│   ├── 🔔 notifications.json       # 알림 데이터
+│   ├── 💬 comments.json            # 댓글 데이터
+│   └── ⚙️ settings.json            # 설정 데이터
+├── 📦 package.json
+└── 📖 README.md
+```
+
+## 🗄 데이터베이스
+
+### 📊 **파일 기반 데이터베이스**
+
+**알림 데이터 (notifications.json):**
+```json
+[
+  {
+    "id": "uuid-1",
+    "type": "comment",
+    "title": "새 댓글이 달렸습니다",
+    "message": "김개발님이 'React Hook 완전 정복'에 댓글을 남겼습니다",
+    "data": {
+      "commentId": "comment-1",
+      "postTitle": "React Hook 완전 정복",
+      "commenterName": "김개발"
+    },
+    "isRead": false,
+    "createdAt": "2024-01-15T10:30:00.000Z"
+  }
+]
+```
+
+**설정 데이터 (settings.json):**
+```json
+{
+  "notifications": {
+    "enabled": true,
+    "sound": true,
+    "desktop": false,
+    "types": {
+      "comment": true,
+      "like": false,
+      "follow": false,
+      "system": true
+    }
+  }
+}
+```
+
+## 🔌 WebSocket 통신
+
+### **연결 및 이벤트 처리**
+
+```javascript
+// 클라이언트 연결
+const socket = io('http://localhost:8080');
+
+// 알림 룸 참여
+socket.emit('join_room', { room: 'notifications' });
+
+// 새 알림 수신
+socket.on('notification:new', (notification) => {
+  console.log('새 알림:', notification);
+  // UI 업데이트
+});
+
+// 연결 상태 확인
+socket.on('connection:status', (status) => {
+  console.log('연결 상태:', status);
+});
+```
+
+## 📝 스크립트 명령어
+
+| 명령어 | 설명 |
+|-------|------|
+| `npm start` | 프로덕션 서버 실행 |
+| `npm run dev` | 개발 서버 실행 (nodemon) |
+| `npm run init-db` | 데이터베이스 초기화 |
+| `npm run init-db stats` | 데이터베이스 통계 확인 |
+| `npm run init-db reset` | 데이터베이스 리셋 |
+| `npm test` | 테스트 실행 |
+| `npm run lint` | 코드 린트 검사 |
+
+## 🧪 API 사용 예시
+
+### **댓글 작성 (알림 생성)**
+```bash
+curl -X POST http://localhost:8080/api/comments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "postTitle": "React Hook 사용법",
+    "commenterName": "김개발",
+    "content": "정말 유용한 글이네요!"
+  }'
+```
+
+### **알림 목록 조회**
+```bash
+curl http://localhost:8080/api/notifications
+```
+
+### **알림 읽음 처리**
+```bash
+curl -X PUT http://localhost:8080/api/notifications/uuid-1/read
+```
+
+### **테스트 알림 생성**
+```bash
+curl -X POST http://localhost:8080/api/notifications/test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "system",
+    "title": "테스트 알림",
+    "message": "시스템 테스트 메시지입니다."
+  }'
+```
+
+## 🎯 주요 기능
+
+### ✅ **구현된 기능**
+- 실시간 알림 생성 및 전송
+- WebSocket 기반 양방향 통신
+- 알림 읽음/안읽음 상태 관리
+- 알림 타입별 설정 (comment, like, follow, system)
+- 알림 소리 및 데스크톱 알림 설정
+- 자동 재연결 지원 (Socket.IO)
+- 알림 통계 및 관리
+- 파일 기반 데이터 저장
+
+### 🔔 **알림 타입**
+- **comment**: 댓글 알림
+- **like**: 좋아요 알림 (확장 가능)
+- **follow**: 팔로우 알림 (확장 가능)
+- **system**: 시스템 알림
+
+## 🚀 실시간 시나리오
+
+1. **댓글 작성** → `POST /api/comments`
+2. **알림 생성** → `NotificationService.createCommentNotification()`
+3. **WebSocket 전송** → `io.emit('notification:new')`
+4. **클라이언트 수신** → 실시간 UI 업데이트
+5. **읽음 처리** → `socket.emit('mark_notification_read')`
+6. **상태 동기화** → 모든 클라이언트 업데이트
+
+## 🔧 환경 설정
+
+### **개발 환경**
+```env
+NODE_ENV=development
+PORT=8080
+FRONTEND_URL=http://localhost:5173
+DEBUG_ENABLED=true
+VERBOSE_LOGGING=true
+```
+
+### **프로덕션 환경**
+```env
+NODE_ENV=production
+PORT=8080
+FRONTEND_URL=https://your-frontend-domain.com
+DEBUG_ENABLED=false
+VERBOSE_LOGGING=false
+```
+
+## 🐛 문제 해결
+
+### **포트 충돌**
+```bash
+# 포트 사용 확인
+netstat -ano | findstr :8080  # Windows
+lsof -i :8080                 # macOS/Linux
+```
+
+### **WebSocket 연결 오류**
+- CORS 설정 확인: `FRONTEND_URL` 환경 변수
+- 방화벽 설정 확인
+- 브라우저 개발자 도구에서 네트워크 탭 확인
+
+### **데이터베이스 오류**
+```bash
+# 데이터 초기화
+npm run init-db reset
+
+# 권한 확인
+chmod 755 data/
+chmod 644 data/*.json
+```
+
+## 📈 확장 계획
+
+- [ ] **Redis 연동** - 분산 환경 지원
+- [ ] **Push Notification** - 모바일 알림
+- [ ] **이메일 알림** - 오프라인 사용자 지원
+- [ ] **알림 템플릿** - 커스텀 알림 디자인
+- [ ] **사용자 그룹** - 멀티 사용자 지원
+- [ ] **알림 히스토리** - 장기 보관 정책
+
+---
+
+🚀 **Real-time Notifications Made Simple!**

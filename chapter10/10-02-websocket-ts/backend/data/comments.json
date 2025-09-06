@@ -1,0 +1,18 @@
+[
+  {
+    "id": "comment-1",
+    "postTitle": "React Hook 완전 정복",
+    "commenterName": "김개발",
+    "commenterEmail": "kimdev@example.com",
+    "content": "정말 유용한 글이네요! Hook 사용법이 명확해졌습니다.",
+    "createdAt": "2025-09-06T16:17:08.287Z"
+  },
+  {
+    "id": "comment-2",
+    "postTitle": "TypeScript 실전 가이드",
+    "commenterName": "이타입",
+    "commenterEmail": "letype@example.com",
+    "content": "타입 정의가 정말 도움이 됐어요. 감사합니다!",
+    "createdAt": "2025-09-06T16:16:08.287Z"
+  }
+]

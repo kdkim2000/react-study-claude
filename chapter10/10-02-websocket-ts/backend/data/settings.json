@@ -1,0 +1,14 @@
+{
+  "notifications": {
+    "enabled": true,
+    "sound": true,
+    "desktop": false,
+    "types": {
+      "comment": true,
+      "like": false,
+      "follow": false,
+      "system": true
+    }
+  },
+  "lastUpdated": "2025-09-06T16:17:08.291Z"
+}
